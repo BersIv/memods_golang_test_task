@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"memods_golang_test_task/db"
+	"memods_golang_test_task/internal/auth"
+	"net/http"
 
 	"github.com/joho/godotenv"
 )
@@ -21,7 +23,14 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	
+	fmt.Println("Database initialized")
 
-	fmt.Println(dbConn)
+	authHandler := auth.NewHandler(auth.NewRepository(dbConn))
+
+	http.HandleFunc("/getUserById", authHandler.GetUserById)
+
+	err = http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatalln("Error listening: ", err)
+	}
 }

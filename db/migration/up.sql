@@ -7,7 +7,7 @@ create table users
     password varchar not null
 );
 
-create table refrest_tokens
+create table refresh_tokens
 (
     userid uuid not null
         constraint refresh_tokens_users_id_fk

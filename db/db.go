@@ -3,17 +3,12 @@ package db
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 
 	_ "github.com/lib/pq"
 )
 
-type Database struct {
-	db *sql.DB
-}
-
-func NewDatabase() (*Database, error) {
+func NewDatabase() (*sql.DB, error) {
 	dbUsername := os.Getenv("DB_USERNAME")
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbHost := os.Getenv("DB_HOST")
@@ -30,16 +25,5 @@ func NewDatabase() (*Database, error) {
 		return nil, err
 	}
 
-	database := &Database{db: db}
-
-	return database, nil
-}
-
-func (d *Database) Close() error {
-	if err := d.db.Close(); err != nil {
-		log.Println("Error while closing database: ", err)
-		return err
-	}
-
-	return nil
+	return db, nil
 }
