@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/http"
 )
 
 type User struct {
@@ -23,17 +24,19 @@ type NewTokensRes struct {
 }
 
 type RefreshTokenReq struct {
-	AccessToken  string `json:"AccessToken"`
-	RefreshToken string `json:"RefreshToken"`
+	AccessToken  http.Cookie
+	RefreshToken http.Cookie
+	Ip           string
 }
 
 type Repository interface {
 	getUserById(ctx context.Context, userId *string) (*User, error)
 	updateRefreshToken(ctx context.Context, userId *string, tokens *NewTokens) error
-	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, error)
+	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, *bool, error)
+	setUsedRefreshToken(ctx context.Context, accessTokenId *string) error
 }
 
 type Service interface {
 	getNewTokens(c context.Context, userId *string) (tokens *NewTokensRes, err error)
-	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, error)
+	checkTokens(c context.Context, req *RefreshTokenReq) (*string, error)
 }
