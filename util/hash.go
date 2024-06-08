@@ -12,3 +12,7 @@ func HashToken(token string) (string, error) {
 
 	return string(hashedToken), nil
 }
+
+func CompareTokens(databseToken string, cookieToken string) error {
+	return bcrypt.CompareHashAndPassword([]byte(databseToken), []byte(cookieToken))
+}

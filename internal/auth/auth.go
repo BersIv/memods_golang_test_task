@@ -22,11 +22,18 @@ type NewTokensRes struct {
 	RefreshToken string `json:"RefreshToken"`
 }
 
+type RefreshTokenReq struct {
+	AccessToken  string `json:"AccessToken"`
+	RefreshToken string `json:"RefreshToken"`
+}
+
 type Repository interface {
-	getUserById(ctx context.Context, user *User) (*User, error)
-	newRefreshToken(ctx context.Context, userId string, tokens *NewTokens) error
+	getUserById(ctx context.Context, userId *string) (*User, error)
+	updateRefreshToken(ctx context.Context, userId *string, tokens *NewTokens) error
+	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, error)
 }
 
 type Service interface {
-	getTokens(c context.Context, user *User) (tokens *NewTokensRes, err error)
+	getNewTokens(c context.Context, userId *string) (tokens *NewTokensRes, err error)
+	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, error)
 }

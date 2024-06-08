@@ -30,11 +30,11 @@ func NewService(r Repository) Service {
 	}
 }
 
-func (s *service) getTokens(c context.Context, user *User) (*NewTokensRes, error) {
+func (s *service) getNewTokens(c context.Context, userId *string) (*NewTokensRes, error) {
 	ctx, cancel := context.WithTimeout(c, s.timeout)
 	defer cancel()
 
-	user, err := s.Repository.getUserById(ctx, user)
+	user, err := s.Repository.getUserById(ctx, userId)
 	if err != nil {
 		return &NewTokensRes{}, err
 	}
@@ -44,18 +44,29 @@ func (s *service) getTokens(c context.Context, user *User) (*NewTokensRes, error
 		return &NewTokensRes{}, err
 	}
 	response := NewTokensRes{AccessToken: tokens.AccessToken, RefreshToken: base64.StdEncoding.EncodeToString([]byte(tokens.RefreshToken))}
-
 	tokens.RefreshToken, err = util.HashToken(tokens.RefreshToken)
 	if err != nil {
 		return &NewTokensRes{}, err
 	}
 
-	err = s.Repository.newRefreshToken(ctx, user.Id, tokens)
+	err = s.Repository.updateRefreshToken(ctx, &user.Id, tokens)
 	if err != nil {
 		return &NewTokensRes{}, err
 	}
 
 	return &response, nil
+}
+
+func (s *service) getRefreshToken(c context.Context, accessTokenId *string) (*string, error) {
+	ctx, cancel := context.WithTimeout(c, s.timeout)
+	defer cancel()
+
+	token, err := s.Repository.getRefreshToken(ctx, accessTokenId)
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }
 
 func newTokens(user *User) (*NewTokens, error) {

@@ -28,6 +28,7 @@ func main() {
 	authHandler := auth.NewHandler(auth.NewService(auth.NewRepository(dbConn)))
 
 	http.HandleFunc("/getTokens", authHandler.GetTokens)
+	http.HandleFunc("/refreshTokens", authHandler.RefreshTokens)
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
