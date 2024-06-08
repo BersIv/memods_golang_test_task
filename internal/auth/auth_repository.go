@@ -24,22 +24,33 @@ func (r *repository) getUserById(ctx context.Context, userId *string) (*User, er
 	return &user, nil
 }
 
-func (r *repository) getRefreshToken(ctx context.Context, accessTokenId *string) (*string, error) {
+func (r *repository) getRefreshToken(ctx context.Context, accessTokenId *string) (*string, *bool, error) {
 	var token string
-	query := "SELECT token FROM refresh_tokens WHERE access_token_id = $1"
-	err := r.db.QueryRowContext(ctx, query, accessTokenId).Scan(&token)
+	var used bool
+	query := `SELECT token, used FROM refresh_tokens WHERE access_token_id = $1`
+	err := r.db.QueryRowContext(ctx, query, accessTokenId).Scan(&token, &used)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &token, nil
+	return &token, &used, nil
 }
 
 func (r *repository) updateRefreshToken(ctx context.Context, userId *string, tokens *NewTokens) error {
 
 	query := `INSERT INTO refresh_tokens(user_id, token, access_token_id) VALUES($1, $2, $3) 
-				ON CONFLICT (user_id) DO UPDATE SET token = $2, access_token_id = $3`
+				ON CONFLICT (user_id) DO UPDATE SET token = $2, access_token_id = $3, used = false`
 	_, err := r.db.Exec(query, userId, tokens.RefreshToken, tokens.AccessTokenId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *repository) setUsedRefreshToken(ctx context.Context, userId *string) error {
+	query := `UPDATE refresh_tokens SET used = false WHERE user_id = $1`
+	_, err := r.db.Exec(query, userId)
 	if err != nil {
 		return err
 	}

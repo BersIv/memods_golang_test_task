@@ -15,5 +15,6 @@ create table refresh_tokens
         constraint refresh_tokens_users_id_fk
             references users(id),
     token  varchar not null,
-    access_token_id varchar not null
+    access_token_id varchar not null,
+    used boolean default false not null
 );

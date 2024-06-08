@@ -3,6 +3,9 @@ package auth
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"fmt"
+	"log"
 	"memods_golang_test_task/util"
 	"os"
 	"time"
@@ -21,6 +24,15 @@ type MyCustomClaims struct {
 	Nickname string `json:"Nickname"`
 	ClientIp string `json:"ClientIp"`
 	jwt.RegisteredClaims
+}
+
+type CustomError struct {
+	code    int
+	message string
+}
+
+func (e CustomError) Error() string {
+	return fmt.Sprintf("error %d: %s", e.code, e.message)
 }
 
 func NewService(r Repository) Service {
@@ -57,16 +69,48 @@ func (s *service) getNewTokens(c context.Context, userId *string) (*NewTokensRes
 	return &response, nil
 }
 
-func (s *service) getRefreshToken(c context.Context, accessTokenId *string) (*string, error) {
+func (s *service) checkTokens(c context.Context, req *RefreshTokenReq) (*string, error) {
+	decodedRefreshToken, err := base64.StdEncoding.DecodeString(req.RefreshToken.Value)
+	if err != nil {
+		return nil, err
+	}
+	secret := os.Getenv("SECRET_KEY")
+	token, err := jwt.ParseWithClaims(req.AccessToken.Value, &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(*MyCustomClaims)
+	if !ok || !token.Valid {
+		return nil, err
+	}
+	if claims.ClientIp != req.Ip {
+		//TODO Mail
+		log.Println("Ip changed!")
+	}
+
 	ctx, cancel := context.WithTimeout(c, s.timeout)
 	defer cancel()
+	refreshToken, used, err := s.Repository.getRefreshToken(ctx, &claims.ID)
+	if err != nil {
+		return nil, err
+	}
+	if *used {
+		return nil, errors.New("refresh token already used")
+	}
 
-	token, err := s.Repository.getRefreshToken(ctx, accessTokenId)
+	err = util.CompareTokens(*refreshToken, string(decodedRefreshToken))
 	if err != nil {
 		return nil, err
 	}
 
-	return token, nil
+	err = s.setUsedRefreshToken(ctx, &claims.UserId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &claims.UserId, nil
 }
 
 func newTokens(user *User) (*NewTokens, error) {

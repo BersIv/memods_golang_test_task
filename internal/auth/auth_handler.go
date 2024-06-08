@@ -2,17 +2,14 @@ package auth
 
 import (
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
-	"memods_golang_test_task/util"
 	"net"
 	"net/http"
-	"os"
 	"strings"
-
-	"github.com/golang-jwt/jwt/v5"
+	"time"
 )
 
 type Handler struct {
@@ -63,7 +60,6 @@ func (h *Handler) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong method", http.StatusMethodNotAllowed)
 		return
 	}
-
 	userIp, err := getIP(r)
 	if err != nil {
 		log.Println("Error during getting IP: ", err)
@@ -83,58 +79,24 @@ func (h *Handler) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Refresh-Token cookie is missing", http.StatusUnauthorized)
 		return
 	}
-	decodedRefreshToken, err := base64.StdEncoding.DecodeString(refrToken.Value)
+	request := RefreshTokenReq{Ip: userIp, AccessToken: *accessToken, RefreshToken: *refrToken}
+
+	userId, err := h.Service.checkTokens(r.Context(), &request)
 	if err != nil {
-		log.Println("Error while decoding refresh token: ", err)
-		http.Error(w, "Error while decoding refresh token", http.StatusUnauthorized)
+		log.Println("Error while compairing tokens: ", err)
+		http.Error(w, fmt.Sprintf("Error Error while compairing tokens: %s", err.Error()), http.StatusUnauthorized)
 		return
 	}
 
-	secret := os.Getenv("SECRET_KEY")
-	token, err := jwt.ParseWithClaims(accessToken.Value, &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
-	if err != nil {
-		log.Println("Error while parsing token: ", err)
-		http.Error(w, "Error while parsing token", http.StatusInternalServerError)
-		return
-	}
-
-	claims, ok := token.Claims.(*MyCustomClaims)
-	if !ok || !token.Valid {
-		log.Println("Invalid token")
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
-
-	if claims.ClientIp != userIp {
-		log.Println("Ip changed!")
-	}
-
-	refreshToken, err := h.Service.getRefreshToken(r.Context(), &claims.ID)
-	if err != nil {
-		log.Println("Invalid refresh token: ", err)
-		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
-		return
-	}
-
-	err = util.CompareTokens(*refreshToken, string(decodedRefreshToken))
-	if err != nil {
-		log.Println("Refresh token not same in database: ", err)
-		http.Error(w, "Refresh token not same in database", http.StatusUnauthorized)
-		return
-	}
-
-	//var newTokens NewTokensRes
-	newTokens, err := h.Service.getNewTokens(r.Context(), &claims.UserId)
+	time.Sleep(10 * time.Second)
+	newTokens, err := h.Service.getNewTokens(r.Context(), userId)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Println(claims, userIp, newTokens)
-
+	setCookiesAndRespond(w, newTokens)
 }
 
 func setCookiesAndRespond(w http.ResponseWriter, tokens *NewTokensRes) {
