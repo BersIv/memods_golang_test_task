@@ -1,6 +1,8 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 create table users
 (
-    id       uuid default gen_random_uuid() not null
+    id       uuid default uuid_generate_v4() not null
         constraint users_pk
             primary key,
     username varchar(20) not null,
@@ -9,8 +11,9 @@ create table users
 
 create table refresh_tokens
 (
-    userid uuid not null
+    user_id uuid not null unique
         constraint refresh_tokens_users_id_fk
             references users(id),
-    token  varchar not null
+    token  varchar not null,
+    access_token_id varchar not null
 );

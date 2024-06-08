@@ -1,26 +1,26 @@
 package auth
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"log"
+	"net"
 	"net/http"
-	"time"
+	"strings"
 )
 
 type Handler struct {
-	Repository
-	timeout time.Duration
+	Service
 }
 
-func NewHandler(r Repository) *Handler {
-	return &Handler{Repository: r,
-		timeout: time.Duration(2) * time.Second}
+func NewHandler(s Service) *Handler {
+	return &Handler{Service: s}
 }
 
-func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+func (h *Handler) GetTokens(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		log.Println("Wrong method")
 		http.Error(w, "Wrong method", http.StatusMethodNotAllowed)
 	}
 	var user User
@@ -30,29 +30,67 @@ func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), h.timeout)
-	defer cancel()
-
-	userData, err := h.getUserById(ctx, user.Id)
+	user.Ip, err = getIP(r)
 	if err != nil {
+		log.Println("Error during getting IP: ", err)
+		http.Error(w, "Error during getting IP", http.StatusInternalServerError)
+		return
+	}
+	tokens, err := h.Service.getTokens(r.Context(), &user)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Println("User doesn't exist", &user.Id)
+			http.Error(w, "User doesn't exist", http.StatusUnauthorized)
+			return
+		}
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	jsonResponse, err := json.Marshal(userData)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	setCookiesAndRespond(w, tokens)
+}
+
+func setCookiesAndRespond(w http.ResponseWriter, tokens *NewTokensRes) {
+	cookie := http.Cookie{
+		Name:  "accessToken",
+		Value: tokens.AccessToken,
+	}
+	http.SetCookie(w, &cookie)
+
+	cookie = http.Cookie{
+		Name:  "refreshToken",
+		Value: tokens.RefreshToken,
+	}
+	http.SetCookie(w, &cookie)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func getIP(r *http.Request) (string, error) {
+	ips := r.Header.Get("X-Forwarded-For")
+	splitIps := strings.Split(ips, ",")
+
+	if len(splitIps) > 0 {
+		netIP := net.ParseIP(splitIps[len(splitIps)-1])
+		if netIP != nil {
+			return netIP.String(), nil
+		}
 	}
 
-	_, err = w.Write(jsonResponse)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return "", err
 	}
 
-	fmt.Println(userData)
+	netIP := net.ParseIP(ip)
+	if netIP != nil {
+		ip := netIP.String()
+		if ip == "::1" {
+			return "127.0.0.1", nil
+		}
+		return ip, nil
+	}
+
+	return "", errors.New("IP not found")
 }

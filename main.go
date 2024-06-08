@@ -25,9 +25,9 @@ func main() {
 
 	fmt.Println("Database initialized")
 
-	authHandler := auth.NewHandler(auth.NewRepository(dbConn))
+	authHandler := auth.NewHandler(auth.NewService(auth.NewRepository(dbConn)))
 
-	http.HandleFunc("/getUserById", authHandler.GetUserById)
+	http.HandleFunc("/getTokens", authHandler.GetTokens)
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
