@@ -33,7 +33,7 @@ type Repository interface {
 	getUserById(ctx context.Context, userId *string) (*User, error)
 	updateRefreshToken(ctx context.Context, userId *string, tokens *NewTokens) error
 	getRefreshToken(ctx context.Context, accessTokenId *string) (*string, *bool, error)
-	setUsedRefreshToken(ctx context.Context, userId *string) error
+	setUsedRefreshToken(ctx context.Context, accessTokenId *string) error
 }
 
 type Service interface {

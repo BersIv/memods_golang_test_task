@@ -38,7 +38,7 @@ func (e CustomError) Error() string {
 func NewService(r Repository) Service {
 	return &service{
 		Repository: r,
-		timeout:    time.Duration(2) * time.Second,
+		timeout:    time.Duration(15) * time.Second,
 	}
 }
 
@@ -105,11 +105,10 @@ func (s *service) checkTokens(c context.Context, req *RefreshTokenReq) (*string,
 		return nil, err
 	}
 
-	err = s.setUsedRefreshToken(ctx, &claims.UserId)
+	err = s.setUsedRefreshToken(ctx, &claims.ID)
 	if err != nil {
 		return nil, err
 	}
-
 	return &claims.UserId, nil
 }
 

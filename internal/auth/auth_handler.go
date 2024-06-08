@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type Handler struct {
@@ -88,15 +87,14 @@ func (h *Handler) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	time.Sleep(10 * time.Second)
-	newTokens, err := h.Service.getNewTokens(r.Context(), userId)
+	_, err = h.Service.getNewTokens(r.Context(), userId)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	setCookiesAndRespond(w, newTokens)
+	//setCookiesAndRespond(w, newTokens)
 }
 
 func setCookiesAndRespond(w http.ResponseWriter, tokens *NewTokensRes) {
