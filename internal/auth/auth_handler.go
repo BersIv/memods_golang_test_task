@@ -25,23 +25,23 @@ func (h *Handler) GetTokens(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Wrong method", http.StatusMethodNotAllowed)
 		return
 	}
-	var user User
-	err := json.NewDecoder(r.Body).Decode(&user)
+	var userReq GetUserReq
+	err := json.NewDecoder(r.Body).Decode(&userReq)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	user.Ip, err = getIP(r)
+	userReq.Ip, err = getIP(r)
 	if err != nil {
 		log.Println("Error during getting IP: ", err)
 		http.Error(w, "Error during getting IP", http.StatusInternalServerError)
 		return
 	}
-	tokens, err := h.Service.getNewTokens(r.Context(), &user.Id)
+	tokens, err := h.Service.getNewTokens(r.Context(), &userReq)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			log.Println("User doesn't exist", &user.Id)
+			log.Println("User doesn't exist", &userReq.Id)
 			http.Error(w, "User doesn't exist", http.StatusUnauthorized)
 			return
 		}
@@ -87,14 +87,14 @@ func (h *Handler) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.Service.getNewTokens(r.Context(), userId)
+	newTokens, err := h.Service.getNewTokens(r.Context(), &GetUserReq{Id: *userId, Ip: userIp})
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	//setCookiesAndRespond(w, newTokens)
+	setCookiesAndRespond(w, newTokens)
 }
 
 func setCookiesAndRespond(w http.ResponseWriter, tokens *NewTokensRes) {

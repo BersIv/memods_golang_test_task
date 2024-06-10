@@ -2,12 +2,14 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"memods_golang_test_task/util"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,53 +19,41 @@ import (
 type service struct {
 	Repository
 	timeout time.Duration
+	util.TokenHasher
+	util.TokenParser
 }
 
-type MyCustomClaims struct {
-	UserId   string `json:"Id"`
-	Nickname string `json:"Nickname"`
-	ClientIp string `json:"ClientIp"`
-	jwt.RegisteredClaims
-}
-
-type CustomError struct {
-	code    int
-	message string
-}
-
-func (e CustomError) Error() string {
-	return fmt.Sprintf("error %d: %s", e.code, e.message)
-}
-
-func NewService(r Repository) Service {
+func NewService(r Repository, h util.TokenHasher, tg util.TokenParser) Service {
 	return &service{
-		Repository: r,
-		timeout:    time.Duration(15) * time.Second,
+		Repository:  r,
+		TokenHasher: h,
+		TokenParser: tg,
+		timeout:     time.Duration(10) * time.Second,
 	}
 }
 
-func (s *service) getNewTokens(c context.Context, userId *string) (*NewTokensRes, error) {
+func (s *service) getNewTokens(c context.Context, userReq *GetUserReq) (*NewTokensRes, error) {
 	ctx, cancel := context.WithTimeout(c, s.timeout)
 	defer cancel()
 
-	user, err := s.Repository.getUserById(ctx, userId)
+	user, err := s.Repository.getUserById(ctx, userReq)
 	if err != nil {
-		return &NewTokensRes{}, err
+		return nil, err
 	}
-
+	user.Ip = userReq.Ip
 	tokens, err := newTokens(user)
 	if err != nil {
-		return &NewTokensRes{}, err
+		return nil, err
 	}
 	response := NewTokensRes{AccessToken: tokens.AccessToken, RefreshToken: base64.StdEncoding.EncodeToString([]byte(tokens.RefreshToken))}
-	tokens.RefreshToken, err = util.HashToken(tokens.RefreshToken)
+	tokens.RefreshToken, err = s.TokenHasher.HashToken(tokens.RefreshToken)
 	if err != nil {
-		return &NewTokensRes{}, err
+		return nil, err
 	}
 
 	err = s.Repository.updateRefreshToken(ctx, &user.Id, tokens)
 	if err != nil {
-		return &NewTokensRes{}, err
+		return nil, err
 	}
 
 	return &response, nil
@@ -74,25 +64,23 @@ func (s *service) checkTokens(c context.Context, req *RefreshTokenReq) (*string,
 	if err != nil {
 		return nil, err
 	}
-	secret := os.Getenv("SECRET_KEY")
-	token, err := jwt.ParseWithClaims(req.AccessToken.Value, &MyCustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
+	accessClaims, err := s.TokenParser.CheckAccessToken(req.AccessToken.Value)
 	if err != nil {
 		return nil, err
 	}
-	claims, ok := token.Claims.(*MyCustomClaims)
-	if !ok || !token.Valid {
+	refreshIp, err := parseRefreshToken(string(decodedRefreshToken))
+	if err != nil {
 		return nil, err
 	}
-	if claims.ClientIp != req.Ip {
+
+	if accessClaims.ClientIp != req.Ip || refreshIp != req.Ip {
 		//TODO Mail
 		log.Println("Ip changed!")
 	}
 
 	ctx, cancel := context.WithTimeout(c, s.timeout)
 	defer cancel()
-	refreshToken, used, err := s.Repository.getRefreshToken(ctx, &claims.ID)
+	refreshToken, used, err := s.Repository.getRefreshToken(ctx, &accessClaims.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,35 +88,63 @@ func (s *service) checkTokens(c context.Context, req *RefreshTokenReq) (*string,
 		return nil, errors.New("refresh token already used")
 	}
 
-	err = util.CompareTokens(*refreshToken, string(decodedRefreshToken))
+	err = s.TokenHasher.CompareTokens(*refreshToken, string(decodedRefreshToken))
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.setUsedRefreshToken(ctx, &claims.ID)
+	err = s.Repository.setUsedRefreshToken(ctx, &accessClaims.ID)
 	if err != nil {
 		return nil, err
 	}
-	return &claims.UserId, nil
+	return &accessClaims.UserId, nil
 }
 
 func newTokens(user *User) (*NewTokens, error) {
+	if user.Id == "" || user.Username == "" || user.Ip == "" {
+		return nil, errors.New("user shouldn't have empty fields")
+	}
 	accessTokenId := uuid.New().String()
-	aT := jwt.NewWithClaims(jwt.SigningMethodHS512, MyCustomClaims{
+	aT := jwt.NewWithClaims(jwt.SigningMethodHS512, util.AccessTokenClaims{
 		UserId:   user.Id,
 		Nickname: user.Username,
 		ClientIp: user.Ip,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 			ID:        accessTokenId,
 		},
 	})
 	secretKey := os.Getenv("SECRET_KEY")
 	accessToken, err := aT.SignedString([]byte(secretKey))
 	if err != nil {
-		return &NewTokens{}, err
+		return nil, err
 	}
-	refreshToken := uuid.New().String()
+
+	bytes := make([]byte, 16)
+	_, err = rand.Read(bytes)
+	if err != nil {
+		return nil, err
+	}
+	expiredAt := time.Now().Add(24 * time.Hour)
+	refreshToken := fmt.Sprintf("%s|%s|%s", string(bytes), user.Ip, expiredAt.Format("15:04 2006-01-02"))
 
 	return &NewTokens{AccessTokenId: accessTokenId, AccessToken: accessToken, RefreshToken: refreshToken}, nil
+}
+
+func parseRefreshToken(refreshToken string) (string, error) {
+	token := strings.Split(refreshToken, "|")
+	if len(token) != 3 {
+		return "", errors.New("invalid refresh token")
+	}
+
+	expiredAt, err := time.Parse("15:04 2006-01-02", token[2])
+	if err != nil {
+		return "", err
+	}
+
+	if time.Now().After(expiredAt) {
+		return "", errors.New("refresh token expired")
+	}
+
+	return token[1], nil
 }
