@@ -283,11 +283,11 @@ func TestCheckTokens(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -321,11 +321,11 @@ func TestCheckTokens_DecodeError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: "asadsasasssss",
 		},
 		Ip: "192.168.1.1",
@@ -361,11 +361,11 @@ func TestCheckTokens_ParseRefreshTokenError(t *testing.T) {
 	refrValue := base64.StdEncoding.EncodeToString([]byte("dsdqasdsada"))
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -400,11 +400,11 @@ func TestCheckTokens_ParseRefreshTokenTimeError(t *testing.T) {
 	refrValue := base64.StdEncoding.EncodeToString([]byte("kdjsjdoawqe-0qi-|192.123.1|15esad"))
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -439,11 +439,11 @@ func TestCheckTokens_ParseRefreshTokenExpiredError(t *testing.T) {
 	refrValue := base64.StdEncoding.EncodeToString([]byte("kdjsjdoawqe-0qi-|192.123.1|15:04 2020-01-02"))
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -478,11 +478,11 @@ func TestCheckTokens_CheckAccessTokenError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -517,11 +517,11 @@ func TestCheckTokens_GetRefreshError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -556,11 +556,11 @@ func TestCheckTokens_TokenUsedError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -595,11 +595,11 @@ func TestCheckTokens_SetUsedError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
@@ -634,11 +634,11 @@ func TestCheckTokens_CompareTokensError(t *testing.T) {
 	service := NewService(mockRepo, hasher, tg)
 	refreshReq := &RefreshTokenReq{
 		AccessToken: http.Cookie{
-			Name:  "access_token",
+			Name:  "Access-Token",
 			Value: "access_token_value",
 		},
 		RefreshToken: http.Cookie{
-			Name:  "refresh_token",
+			Name:  "Refresh-Token",
 			Value: string(refrValue),
 		},
 		Ip: "192.168.1.1",
