@@ -13,12 +13,12 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) getUserById(ctx context.Context, userId *string) (*User, error) {
+func (r *repository) getUserById(ctx context.Context, userReq *GetUserReq) (*User, error) {
 	var user User
 	query := `SELECT id, username, password FROM users WHERE id = $1`
-	err := r.db.QueryRowContext(ctx, query, userId).Scan(&user.Id, &user.Username, &user.Password)
+	err := r.db.QueryRowContext(ctx, query, userReq.Id).Scan(&user.Id, &user.Username, &user.Password)
 	if err != nil {
-		return &User{}, err
+		return nil, err
 	}
 
 	return &user, nil

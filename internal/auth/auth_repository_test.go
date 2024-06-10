@@ -24,8 +24,8 @@ func TestGetUserById(t *testing.T) {
 
 	repo := NewRepository(db)
 	ctx := context.Background()
-	userId := "e879426c-ad61-4455-b4b4-07ca20aaf410"
-	user, err := repo.getUserById(ctx, &userId)
+	userReq := GetUserReq{Id: "e879426c-ad61-4455-b4b4-07ca20aaf410"}
+	user, err := repo.getUserById(ctx, &userReq)
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
@@ -55,14 +55,13 @@ func TestGetUserById_Error(t *testing.T) {
 
 	repo := NewRepository(db)
 	ctx := context.Background()
-	userId := "e879426c-ad61-4455-b4b4-07ca20aaf410"
-	user, err := repo.getUserById(ctx, &userId)
+	userReq := GetUserReq{Id: "e879426c-ad61-4455-b4b4-07ca20aaf410"}
+	user, err := repo.getUserById(ctx, &userReq)
 	if err.Error() != "fake error" {
 		t.Errorf("unexpected error: %s", err)
 	}
-	expectedUser := User{}
-	if !reflect.DeepEqual(&expectedUser, user) {
-		t.Errorf("expected %+v, got %+v", expectedUser, user)
+	if user != nil {
+		t.Errorf("expected %+v, got %+v", nil, user)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Errorf("there were unfulfilled expectations: %s", err)

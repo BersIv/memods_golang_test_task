@@ -5,6 +5,7 @@ import (
 	"log"
 	"memods_golang_test_task/db"
 	"memods_golang_test_task/internal/auth"
+	"memods_golang_test_task/util"
 	"net/http"
 
 	"github.com/joho/godotenv"
@@ -25,7 +26,10 @@ func main() {
 
 	fmt.Println("Database initialized")
 
-	authHandler := auth.NewHandler(auth.NewService(auth.NewRepository(dbConn)))
+	hasher := util.Hasher{}
+	tg := util.JWTTokenGetter{}
+
+	authHandler := auth.NewHandler(auth.NewService(auth.NewRepository(dbConn), hasher, tg))
 
 	http.HandleFunc("/getTokens", authHandler.GetTokens)
 	http.HandleFunc("/refreshTokens", authHandler.RefreshTokens)
