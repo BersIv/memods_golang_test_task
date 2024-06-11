@@ -18,3 +18,5 @@ create table refresh_tokens
     access_token_id varchar not null,
     used boolean default false not null
 );
+
+INSERT INTO users(username, password) VALUES ('test', 'test');

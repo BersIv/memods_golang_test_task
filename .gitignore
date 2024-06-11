@@ -1,7 +1,4 @@
 .env
 coverage
 .database
-.dockerignore
-Compose.yaml
-Dockerfile
-README.Docker.md
+pgdata

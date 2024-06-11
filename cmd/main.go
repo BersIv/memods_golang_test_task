@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"memods_golang_test_task/db"
 	"memods_golang_test_task/internal/auth"
@@ -24,7 +23,7 @@ func main() {
 	}
 	defer dbConn.Close()
 
-	fmt.Println("Database initialized")
+	log.Println("Database initialized")
 
 	hasher := util.Hasher{}
 	tg := util.JWTTokenGetter{}
@@ -33,6 +32,8 @@ func main() {
 
 	http.HandleFunc("/getTokens", authHandler.GetTokens)
 	http.HandleFunc("/refreshTokens", authHandler.RefreshTokens)
+
+	log.Println("Server started")
 
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {
